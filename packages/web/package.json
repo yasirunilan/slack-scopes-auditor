@@ -5,8 +5,9 @@
   "description": "Web UI for Slack scopes auditing",
   "type": "module",
   "scripts": {
-    "dev": "npx serve .",
-    "build": "echo 'Static HTML - no build required'"
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo 'No build required'"
   },
   "dependencies": {
     "@slack-scopes-auditor/core": "workspace:*"

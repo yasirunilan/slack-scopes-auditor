@@ -255,18 +255,17 @@ For non-technical users, a simple web interface is included:
 
 ```bash
 # From the project root
-cd packages/web
-
-# Start a local web server (requires npx/npm)
-npx serve .
+pnpm run web
 ```
 
-Then open [http://localhost:3000](http://localhost:3000) in your browser.
+Then open [http://localhost:3001](http://localhost:3001) in your browser.
 
 The web UI provides:
 - **Current Scopes** tab: Categorized view of active scopes
 - **Event Timeline** tab: Table of all scope changes with dates
 - **User Permissions** tab: Breakdown of actions by each user
+
+The web server uses the same `@slack-scopes-auditor/core` package as the CLI, ensuring consistent behavior.
 
 ## Configuration Options
 
@@ -352,8 +351,8 @@ The `admin` scope is required because `team.integrationLogs` returns sensitive i
 
 ## Security Notes
 
-- **Tokens are not stored**: Your Slack token is only used to make API calls
-- **Web UI is local**: The web UI makes direct API calls from your browser to Slack's API - no data passes through any third-party server
+- **Tokens are not stored**: Your Slack token is only used to make API calls and is not persisted
+- **Web UI is local**: The web server runs locally and all Slack API calls are made server-side - your token never leaves your machine
 - **Keep tokens secure**: Don't commit tokens to git or share them publicly
 
 ## License

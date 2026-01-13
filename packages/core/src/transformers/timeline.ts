@@ -1,4 +1,4 @@
-import type { IntegrationLog } from '../api/types.js';
+import type { IntegrationLog, ChangeType, DisabledReason } from '../api/types.js';
 import { parseScopes } from './categorize.js';
 
 /**
@@ -14,13 +14,13 @@ export interface TimelineEvent {
   /** App or service ID */
   appId: string;
   /** Type of change */
-  changeType: string;
+  changeType: ChangeType;
   /** Scopes affected */
   scopes: string[];
   /** Human-readable description */
   description: string;
   /** Reason (for disabled events) */
-  reason?: string;
+  reason?: DisabledReason;
 }
 
 /**

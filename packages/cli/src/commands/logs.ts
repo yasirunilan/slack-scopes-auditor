@@ -3,6 +3,7 @@ import ora from 'ora';
 import { SlackClient, type ChangeType } from '@slack-scopes-auditor/core';
 import { getConfig } from '../utils/config.js';
 import { handleError } from '../utils/error-handler.js';
+import { validateAppId, parsePositiveInt } from '../utils/validation.js';
 import { formatLogsTable, formatJson } from '../formatters/index.js';
 
 export function createLogsCommand(): Command {
@@ -19,11 +20,17 @@ export function createLogsCommand(): Command {
     .option('--all', 'Fetch all pages')
     .option('-l, --limit <limit>', 'Maximum number of records to fetch')
     .action(async (options, cmd) => {
+      const spinner = ora('Fetching integration logs...').start();
       try {
+        if (options.appId) {
+          validateAppId(options.appId);
+        }
+        const count = parsePositiveInt(options.count, 'Count');
+        const page = parsePositiveInt(options.page, 'Page');
+        const limit = options.limit ? parsePositiveInt(options.limit, 'Limit') : undefined;
+
         const globalOpts = cmd.optsWithGlobals();
         const config = await getConfig(globalOpts);
-
-        const spinner = ora('Fetching integration logs...').start();
 
         const client = new SlackClient({ token: config.token });
 
@@ -32,13 +39,12 @@ export function createLogsCommand(): Command {
           user: options.user,
           change_type: options.changeType as ChangeType | undefined,
           team_id: config.teamId,
-          count: parseInt(options.count, 10),
-          page: parseInt(options.page, 10),
+          count,
+          page,
         };
 
         let logs;
         if (options.all || options.limit) {
-          const limit = options.limit ? parseInt(options.limit, 10) : undefined;
           logs = await client.getAllIntegrationLogs({
             ...params,
             limit,
@@ -62,6 +68,7 @@ export function createLogsCommand(): Command {
           console.log(formatLogsTable(logs));
         }
       } catch (error) {
+        spinner.fail('Failed to fetch logs');
         handleError(error);
       }
     });

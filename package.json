@@ -9,7 +9,7 @@
   "scripts": {
     "build": "pnpm -r run build",
     "dev": "pnpm --filter @slack-scopes-auditor/cli run dev",
-    "web": "npx serve packages/web",
+    "web": "pnpm --filter @slack-scopes-auditor/web run dev",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint packages/*/src/**/*.ts",

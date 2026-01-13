@@ -1,4 +1,4 @@
-import type { IntegrationLog } from '../api/types.js';
+import type { IntegrationLog, ChangeType } from '../api/types.js';
 import { parseScopes } from './categorize.js';
 
 /**
@@ -7,7 +7,7 @@ import { parseScopes } from './categorize.js';
 export interface UserScopeAction {
   appId: string;
   scopes: string[];
-  changeType: string;
+  changeType: ChangeType;
   timestamp: Date;
 }
 

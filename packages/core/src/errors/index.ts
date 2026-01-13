@@ -12,6 +12,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   no_permission: 'User does not have permission to access this resource.',
   team_not_found: 'Team not found.',
   app_not_installed: 'App is not installed in this workspace.',
+  http_error: 'HTTP request failed. Please check your network connection.',
+  timeout: 'Request timed out. Please try again.',
 };
 
 export class SlackApiError extends Error {

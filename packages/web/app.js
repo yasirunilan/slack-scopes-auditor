@@ -1,5 +1,5 @@
 // Slack Scopes Auditor - Web UI
-// This is a simple vanilla JS implementation that calls the Slack API directly
+// Uses the backend server which leverages @slack-scopes-auditor/core
 
 const SLACK_APP_MANIFEST = {
   _metadata: { major_version: 1, minor_version: 1 },
@@ -20,33 +20,8 @@ const SLACK_APP_MANIFEST = {
   },
 };
 
-// Scope categories for grouping
-const SCOPE_PATTERNS = {
-  Channels: /^(channels|groups):/,
-  Chat: /^chat:/,
-  Users: /^users:/,
-  Files: /^files:/,
-  Reactions: /^reactions:/,
-  Pins: /^pins:/,
-  Bookmarks: /^bookmarks:/,
-  Reminders: /^reminders:/,
-  Search: /^search:/,
-  Team: /^team:/,
-  Usergroups: /^usergroups:/,
-  Workflow: /^workflow\./,
-  Admin: /^admin\./,
-  Conversations: /^conversations:/,
-  'Direct Messages': /^(im|mpim):/,
-  Commands: /^commands/,
-  Links: /^links:/,
-  Emoji: /^emoji:/,
-  Calls: /^calls:/,
-  Metadata: /^metadata\./,
-};
-
-// Store logs globally for tab switching
-let currentLogs = [];
-let currentAppId = '';
+// Store data globally for tab switching
+let currentData = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -120,23 +95,28 @@ async function runAudit() {
   resultsSection.classList.remove('hidden');
 
   try {
-    // Fetch all logs for the app
-    const logs = await fetchAllLogs(token, appId);
+    // Call backend API which uses @slack-scopes-auditor/core
+    const response = await fetch('/api/audit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token, appId }),
+    });
+
+    const result = await response.json();
+
+    if (!result.ok) {
+      throw new Error(result.message || getErrorMessage(result.error));
+    }
 
     // Store for tab switching
-    currentLogs = logs;
-    currentAppId = appId;
+    currentData = result.data;
 
-    // Compute current scopes
-    const result = computeCurrentScopes(logs, appId);
-
-    // Categorize scopes
-    const categorized = categorizeScopes(result.activeScopes);
-
-    // Display all views
-    displayResults(result, categorized);
-    displayTimeline(logs);
-    displayUserPermissions(logs);
+    // Display all views using data from core package
+    displayResults(currentData.currentScopes, currentData.categorized);
+    displayTimeline(currentData.timeline);
+    displayUserPermissions(currentData.userScopes);
 
     // Switch to scopes tab
     switchTab('scopes');
@@ -146,139 +126,7 @@ async function runAudit() {
   }
 }
 
-async function fetchAllLogs(token, appId) {
-  const allLogs = [];
-  let page = 1;
-  let totalPages = 1;
-
-  do {
-    const params = new URLSearchParams({
-      token,
-      app_id: appId,
-      count: '100',
-      page: page.toString(),
-    });
-
-    const response = await fetch('https://slack.com/api/team.integrationLogs', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params,
-    });
-
-    const data = await response.json();
-
-    if (!data.ok) {
-      throw new Error(getErrorMessage(data.error));
-    }
-
-    allLogs.push(...data.logs);
-    totalPages = data.paging.pages;
-    page++;
-  } while (page <= totalPages);
-
-  return allLogs;
-}
-
-function computeCurrentScopes(logs, appId) {
-  // Sort logs by date ascending
-  const sortedLogs = logs
-    .filter((log) => log.app_id === appId || log.service_id === appId)
-    .sort((a, b) => parseInt(a.date) - parseInt(b.date));
-
-  const activeScopes = new Set();
-  let totalGrants = 0;
-  let totalRevokes = 0;
-  let lastActivity = null;
-
-  for (const log of sortedLogs) {
-    const scopes = parseScopes(log.scope);
-    const logDate = new Date(parseInt(log.date) * 1000);
-
-    if (!lastActivity || logDate > lastActivity) {
-      lastActivity = logDate;
-    }
-
-    switch (log.change_type) {
-      case 'added':
-      case 'expanded':
-        scopes.forEach((s) => activeScopes.add(s));
-        totalGrants += scopes.length;
-        break;
-      case 'removed':
-        scopes.forEach((s) => activeScopes.delete(s));
-        totalRevokes += scopes.length;
-        break;
-      case 'updated':
-        scopes.forEach((s) => activeScopes.add(s));
-        break;
-    }
-  }
-
-  return {
-    appId,
-    activeScopes: Array.from(activeScopes).sort(),
-    totalGrants,
-    totalRevokes,
-    lastActivity,
-  };
-}
-
-function parseScopes(scopeString) {
-  if (!scopeString) return [];
-  return scopeString
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-}
-
-function categorizeScopes(scopes) {
-  const categoryMap = new Map();
-
-  // Initialize categories
-  for (const category of Object.keys(SCOPE_PATTERNS)) {
-    categoryMap.set(category, new Set());
-  }
-  categoryMap.set('Other', new Set());
-
-  // Categorize each scope
-  for (const scope of scopes) {
-    let matched = false;
-    for (const [category, pattern] of Object.entries(SCOPE_PATTERNS)) {
-      if (pattern.test(scope)) {
-        categoryMap.get(category).add(scope);
-        matched = true;
-        break;
-      }
-    }
-    if (!matched) {
-      categoryMap.get('Other').add(scope);
-    }
-  }
-
-  // Build result with non-empty categories
-  const categories = [];
-  for (const [name, scopeSet] of categoryMap) {
-    if (scopeSet.size > 0) {
-      categories.push({
-        name,
-        scopes: Array.from(scopeSet).sort(),
-      });
-    }
-  }
-
-  // Sort categories, keep "Other" at end
-  categories.sort((a, b) => {
-    if (a.name === 'Other') return 1;
-    if (b.name === 'Other') return -1;
-    return a.name.localeCompare(b.name);
-  });
-
-  return { categories, total: scopes.length };
-}
-
-function displayResults(result, categorized) {
+function displayResults(currentScopes, categorized) {
   const container = document.getElementById('scopesContainer');
 
   if (categorized.categories.length === 0) {
@@ -291,9 +139,9 @@ function displayResults(result, categorized) {
   for (const category of categorized.categories) {
     html += `
       <div class="scope-category">
-        <h4>${category.name} (${category.scopes.length})</h4>
+        <h4>${escapeHtml(category.name)} (${category.scopes.length})</h4>
         <ul class="scope-list">
-          ${category.scopes.map((s) => `<li>${s}</li>`).join('')}
+          ${category.scopes.map((s) => `<li>${escapeHtml(s)}</li>`).join('')}
         </ul>
       </div>
     `;
@@ -302,25 +150,20 @@ function displayResults(result, categorized) {
   html += `
     <div class="summary">
       <p><strong>Total:</strong> ${categorized.total} active scopes</p>
-      ${result.lastActivity ? `<p><strong>Last activity:</strong> ${result.lastActivity.toLocaleString()}</p>` : ''}
+      ${currentScopes.lastActivity ? `<p><strong>Last activity:</strong> ${new Date(currentScopes.lastActivity).toLocaleString()}</p>` : ''}
     </div>
   `;
 
   container.innerHTML = html;
 }
 
-function displayTimeline(logs) {
+function displayTimeline(timeline) {
   const container = document.getElementById('timelineContainer');
 
-  if (logs.length === 0) {
+  if (timeline.length === 0) {
     container.innerHTML = '<p>No events found.</p>';
     return;
   }
-
-  // Sort by date descending (most recent first)
-  const sortedLogs = [...logs].sort(
-    (a, b) => parseInt(b.date) - parseInt(a.date)
-  );
 
   let html = `
     <div class="table-container">
@@ -336,19 +179,18 @@ function displayTimeline(logs) {
         <tbody>
   `;
 
-  for (const log of sortedLogs) {
-    const date = new Date(parseInt(log.date) * 1000);
-    const scopes = parseScopes(log.scope);
+  for (const event of timeline) {
+    const date = new Date(event.timestamp);
 
     html += `
       <tr>
         <td>${date.toLocaleString()}</td>
-        <td>${escapeHtml(log.user_name)}</td>
+        <td>${escapeHtml(event.userName)}</td>
         <td>
-          <span class="badge badge-${log.change_type}">${log.change_type}</span>
+          <span class="badge badge-${event.changeType}">${event.changeType}</span>
         </td>
         <td class="scopes-cell">
-          ${scopes.length > 0 ? scopes.map((s) => `<span class="scope-tag">${escapeHtml(s)}</span>`).join('') : '-'}
+          ${event.scopes.length > 0 ? event.scopes.map((s) => `<span class="scope-tag">${escapeHtml(s)}</span>`).join('') : '-'}
         </td>
       </tr>
     `;
@@ -359,76 +201,31 @@ function displayTimeline(logs) {
       </table>
     </div>
     <div class="summary">
-      <p><strong>Total events:</strong> ${logs.length}</p>
+      <p><strong>Total events:</strong> ${timeline.length}</p>
     </div>
   `;
 
   container.innerHTML = html;
 }
 
-function displayUserPermissions(logs) {
+function displayUserPermissions(userScopes) {
   const container = document.getElementById('usersContainer');
 
-  if (logs.length === 0) {
+  if (userScopes.length === 0) {
     container.innerHTML = '<p>No user activity found.</p>';
     return;
   }
 
-  // Group by user
-  const userMap = new Map();
-
-  for (const log of logs) {
-    const scopes = parseScopes(log.scope);
-    const timestamp = new Date(parseInt(log.date) * 1000);
-
-    let user = userMap.get(log.user_id);
-    if (!user) {
-      user = {
-        userId: log.user_id,
-        userName: log.user_name,
-        actions: [],
-        totalGranted: 0,
-        totalRevoked: 0,
-        lastActivity: timestamp,
-      };
-      userMap.set(log.user_id, user);
-    }
-
-    user.actions.push({
-      timestamp,
-      changeType: log.change_type,
-      scopes,
-    });
-
-    if (log.change_type === 'added' || log.change_type === 'expanded') {
-      user.totalGranted += scopes.length;
-    } else if (log.change_type === 'removed') {
-      user.totalRevoked += scopes.length;
-    }
-
-    if (timestamp > user.lastActivity) {
-      user.lastActivity = timestamp;
-    }
-  }
-
-  // Sort users by last activity
-  const users = Array.from(userMap.values()).sort(
-    (a, b) => b.lastActivity.getTime() - a.lastActivity.getTime()
-  );
-
   let html = '';
 
-  for (const user of users) {
-    // Sort actions by date descending
-    user.actions.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-
+  for (const user of userScopes) {
     html += `
       <div class="user-card">
         <div class="user-card-header">
           <h4>${escapeHtml(user.userName)}</h4>
           <div class="user-stats">
-            <span class="stat-granted">+${user.totalGranted} granted</span>
-            <span class="stat-revoked">-${user.totalRevoked} revoked</span>
+            <span class="stat-granted">+${user.totalScopesGranted} granted</span>
+            <span class="stat-revoked">-${user.totalScopesRevoked} revoked</span>
           </div>
         </div>
         <table class="data-table">
@@ -442,10 +239,15 @@ function displayUserPermissions(logs) {
           <tbody>
     `;
 
-    for (const action of user.actions) {
+    // Sort actions by date descending
+    const sortedActions = [...user.actions].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    for (const action of sortedActions) {
       html += `
         <tr>
-          <td>${action.timestamp.toLocaleString()}</td>
+          <td>${new Date(action.timestamp).toLocaleString()}</td>
           <td>
             <span class="badge badge-${action.changeType}">${action.changeType}</span>
           </td>
@@ -465,7 +267,7 @@ function displayUserPermissions(logs) {
 
   html += `
     <div class="summary">
-      <p><strong>Total users:</strong> ${users.length}</p>
+      <p><strong>Total users:</strong> ${userScopes.length}</p>
     </div>
   `;
 

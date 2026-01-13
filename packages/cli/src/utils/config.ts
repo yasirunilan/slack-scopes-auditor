@@ -25,8 +25,17 @@ export async function getConfig(cliOptions: CliOptions): Promise<AppConfig> {
 
   // Load cosmiconfig
   const explorer = cosmiconfig('slack-scopes');
-  const result = await explorer.search();
-  const fileConfig = (result?.config as Partial<AppConfig>) ?? {};
+  let fileConfig: Partial<AppConfig> = {};
+  try {
+    const result = await explorer.search();
+    fileConfig = (result?.config as Partial<AppConfig>) ?? {};
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new ConfigurationError(
+      `Failed to parse configuration file: ${message}\n\n` +
+        'Please check your .slack-scopesrc.json or slack-scopes.config.js file for syntax errors.'
+    );
+  }
 
   // Resolve token with priority
   const token =

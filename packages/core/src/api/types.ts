@@ -78,9 +78,6 @@ export interface IntegrationLogsRequest {
   service_id?: string;
 }
 
-export interface IntegrationLogsResponse {
-  ok: boolean;
-  logs: IntegrationLog[];
-  paging: PagingInfo;
-  error?: string;
-}
+export type IntegrationLogsResponse =
+  | { ok: true; logs: IntegrationLog[]; paging: PagingInfo; error?: never }
+  | { ok: false; logs: IntegrationLog[]; paging: PagingInfo; error: string };

@@ -1,4 +1,4 @@
-import ky, { type KyInstance } from 'ky';
+import ky, { type KyInstance, HTTPError, TimeoutError } from 'ky';
 import type {
   IntegrationLog,
   IntegrationLogsRequest,
@@ -47,7 +47,6 @@ export class SlackClient {
     params: IntegrationLogsRequest = {}
   ): Promise<IntegrationLogsResponse> {
     const searchParams = new URLSearchParams();
-    searchParams.set('token', this.token);
 
     if (params.app_id) searchParams.set('app_id', params.app_id);
     if (params.change_type) searchParams.set('change_type', params.change_type);
@@ -57,20 +56,34 @@ export class SlackClient {
     if (params.team_id) searchParams.set('team_id', params.team_id);
     if (params.service_id) searchParams.set('service_id', params.service_id);
 
-    const response = await this.client
-      .post('team.integrationLogs', {
-        body: searchParams,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      })
-      .json<IntegrationLogsResponse>();
+    try {
+      const response = await this.client
+        .post('team.integrationLogs', {
+          body: searchParams,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Bearer ${this.token}`,
+          },
+        })
+        .json<IntegrationLogsResponse>();
 
-    if (!response.ok) {
-      throw SlackApiError.fromResponse(response);
+      if (!response.ok) {
+        throw SlackApiError.fromResponse(response);
+      }
+
+      return response;
+    } catch (error) {
+      if (error instanceof SlackApiError) {
+        throw error;
+      }
+      if (error instanceof HTTPError || (error instanceof Error && error.name === 'HTTPError')) {
+        throw new SlackApiError('http_error', undefined);
+      }
+      if (error instanceof TimeoutError || (error instanceof Error && error.name === 'TimeoutError')) {
+        throw new SlackApiError('timeout', undefined);
+      }
+      throw error;
     }
-
-    return response;
   }
 
   /**
