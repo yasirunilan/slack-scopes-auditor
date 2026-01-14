@@ -302,3 +302,78 @@ function getErrorMessage(errorCode) {
 
   return messages[errorCode] || `Slack API error: ${errorCode}`;
 }
+
+// CSV Export Functions
+function escapeCSV(value) {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  // Escape quotes and wrap in quotes if contains comma, quote, or newline
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+function downloadCSV(filename, csvContent) {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
+
+function downloadTimelineCSV() {
+  if (!currentData || !currentData.timeline || currentData.timeline.length === 0) {
+    alert('No timeline data to export');
+    return;
+  }
+
+  const headers = ['Date', 'Time', 'User', 'Action', 'Scopes'];
+  const rows = currentData.timeline.map((event) => {
+    const date = new Date(event.timestamp);
+    return [
+      date.toLocaleDateString(),
+      date.toLocaleTimeString(),
+      event.userName,
+      event.changeType,
+      event.scopes.join(', '),
+    ].map(escapeCSV).join(',');
+  });
+
+  const csvContent = [headers.join(','), ...rows].join('\n');
+  const appId = document.getElementById('appId').value.trim() || 'app';
+  downloadCSV(`timeline-${appId}-${new Date().toISOString().split('T')[0]}.csv`, csvContent);
+}
+
+function downloadUserPermissionsCSV() {
+  if (!currentData || !currentData.userScopes || currentData.userScopes.length === 0) {
+    alert('No user permissions data to export');
+    return;
+  }
+
+  const headers = ['User', 'Total Granted', 'Total Revoked', 'Date', 'Time', 'Action', 'Scopes'];
+  const rows = [];
+
+  for (const user of currentData.userScopes) {
+    for (const action of user.actions) {
+      const date = new Date(action.timestamp);
+      rows.push([
+        user.userName,
+        user.totalScopesGranted,
+        user.totalScopesRevoked,
+        date.toLocaleDateString(),
+        date.toLocaleTimeString(),
+        action.changeType,
+        action.scopes.join(', '),
+      ].map(escapeCSV).join(','));
+    }
+  }
+
+  const csvContent = [headers.join(','), ...rows].join('\n');
+  const appId = document.getElementById('appId').value.trim() || 'app';
+  downloadCSV(`user-permissions-${appId}-${new Date().toISOString().split('T')[0]}.csv`, csvContent);
+}

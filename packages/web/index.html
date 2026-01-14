@@ -44,12 +44,18 @@
         </div>
 
         <div id="tab-timeline" class="tab-content">
-          <h2>Event Timeline</h2>
+          <div class="tab-header">
+            <h2>Event Timeline</h2>
+            <button class="btn-download" onclick="downloadTimelineCSV()">Download CSV</button>
+          </div>
           <div id="timelineContainer"></div>
         </div>
 
         <div id="tab-users" class="tab-content">
-          <h2>User Permissions</h2>
+          <div class="tab-header">
+            <h2>User Permissions</h2>
+            <button class="btn-download" onclick="downloadUserPermissionsCSV()">Download CSV</button>
+          </div>
           <div id="usersContainer"></div>
         </div>
       </section>
