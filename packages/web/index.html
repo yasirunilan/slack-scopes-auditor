@@ -28,7 +28,33 @@
           <label for="appId">App ID to Audit</label>
           <input type="text" id="appId" placeholder="A1234567890">
         </div>
-        <button id="auditBtn" onclick="runAudit()">Audit Scopes</button>
+        <div class="button-group">
+          <button id="auditBtn" onclick="runAudit()">Audit Scopes</button>
+          <button id="compareBtn" class="btn-secondary" onclick="showCompareModal()">Compare Apps</button>
+        </div>
+      </section>
+
+      <section id="compareModal" class="compare-section hidden">
+        <h2>Compare App Permissions</h2>
+        <p class="compare-description">Select 2-5 apps to compare their scopes side-by-side.</p>
+        <div id="appListContainer">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading apps...</p>
+          </div>
+        </div>
+        <div class="compare-actions">
+          <button onclick="runComparison()">Compare Selected</button>
+          <button class="btn-secondary" onclick="hideCompareModal()">Cancel</button>
+        </div>
+      </section>
+
+      <section id="compareResults" class="results-section hidden">
+        <div class="tab-header">
+          <h2>App Comparison</h2>
+          <button class="btn-secondary" onclick="hideCompareResults()">Back</button>
+        </div>
+        <div id="compareContainer"></div>
       </section>
 
       <section id="results" class="results-section hidden">

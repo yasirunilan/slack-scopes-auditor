@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {
   SlackClient,
   computeCurrentScopes,
+  computeAllAppScopes,
   categorizeScopes,
   transformToTimeline,
   transformToUserScopes,
@@ -73,6 +74,115 @@ async function handleAudit(req, res) {
   }
 }
 
+async function handleListApps(req, res) {
+  try {
+    const { token } = await parseJsonBody(req);
+
+    if (!token) {
+      sendJson(res, 400, { ok: false, error: 'Missing token' });
+      return;
+    }
+
+    const client = new SlackClient({ token });
+    // Fetch all logs (no app_id filter)
+    const logs = await client.getAllIntegrationLogs({});
+
+    // Get all unique apps with their scopes
+    const allAppScopes = computeAllAppScopes(logs);
+
+    // Convert to array format with app info
+    const apps = [];
+    for (const [appId, scopeData] of allAppScopes) {
+      // Find app name from logs (app_type contains the app name)
+      const appLog = logs.find((log) => log.app_id === appId || log.service_id === appId);
+      apps.push({
+        appId,
+        appName: appLog?.app_type || appLog?.service_type || 'Unknown App',
+        scopeCount: scopeData.activeScopes.length,
+        lastActivity: scopeData.lastActivity,
+      });
+    }
+
+    // Sort by scope count descending
+    apps.sort((a, b) => b.scopeCount - a.scopeCount);
+
+    sendJson(res, 200, { ok: true, apps });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    const code = error.code || 'unknown_error';
+    sendJson(res, 400, { ok: false, error: code, message });
+  }
+}
+
+async function handleCompareApps(req, res) {
+  try {
+    const { token, appIds } = await parseJsonBody(req);
+
+    if (!token) {
+      sendJson(res, 400, { ok: false, error: 'Missing token' });
+      return;
+    }
+
+    if (!appIds || !Array.isArray(appIds) || appIds.length < 2) {
+      sendJson(res, 400, { ok: false, error: 'Please select at least 2 apps to compare' });
+      return;
+    }
+
+    if (appIds.length > 5) {
+      sendJson(res, 400, { ok: false, error: 'Maximum 5 apps can be compared at once' });
+      return;
+    }
+
+    const client = new SlackClient({ token });
+    // Fetch all logs to get complete picture
+    const logs = await client.getAllIntegrationLogs({});
+
+    // Compute scopes for selected apps
+    const appData = [];
+    const allScopes = new Set();
+
+    for (const appId of appIds) {
+      const scopeResult = computeCurrentScopes(logs, appId);
+      const appLog = logs.find((log) => log.app_id === appId || log.service_id === appId);
+
+      appData.push({
+        appId,
+        appName: appLog?.app_type || appLog?.service_type || 'Unknown App',
+        scopes: scopeResult.activeScopes,
+        lastActivity: scopeResult.lastActivity,
+      });
+
+      // Collect all unique scopes
+      for (const scope of scopeResult.activeScopes) {
+        allScopes.add(scope);
+      }
+    }
+
+    // Build comparison matrix
+    const scopeList = Array.from(allScopes).sort();
+    const comparison = scopeList.map((scope) => ({
+      scope,
+      apps: appData.map((app) => ({
+        appId: app.appId,
+        hasScope: app.scopes.includes(scope),
+      })),
+    }));
+
+    sendJson(res, 200, {
+      ok: true,
+      data: {
+        apps: appData,
+        scopes: scopeList,
+        comparison,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    const code = error.code || 'unknown_error';
+    sendJson(res, 400, { ok: false, error: code, message });
+  }
+}
+
 function serveStaticFile(req, res) {
   let filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
 
@@ -118,6 +228,18 @@ const server = http.createServer((req, res) => {
   // API endpoint - uses core package
   if (req.url === '/api/audit' && req.method === 'POST') {
     handleAudit(req, res);
+    return;
+  }
+
+  // List all apps endpoint
+  if (req.url === '/api/apps' && req.method === 'POST') {
+    handleListApps(req, res);
+    return;
+  }
+
+  // Compare apps endpoint
+  if (req.url === '/api/compare' && req.method === 'POST') {
+    handleCompareApps(req, res);
     return;
   }
 

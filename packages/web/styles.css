@@ -141,6 +141,40 @@ button:disabled {
   margin-right: 0.5rem;
 }
 
+/* Scope item with description */
+.scope-item-link {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: baseline;
+  text-decoration: none;
+  color: inherit;
+  flex-wrap: wrap;
+}
+
+.scope-item-link:hover {
+  text-decoration: none;
+}
+
+.scope-item-name {
+  color: #1565c0;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.9rem;
+}
+
+.scope-item-link:hover .scope-item-name {
+  text-decoration: underline;
+}
+
+.scope-item-separator {
+  color: #999;
+  margin: 0 0.5rem;
+}
+
+.scope-item-description {
+  font-size: 0.85rem;
+  color: #666;
+}
+
 .summary {
   margin-top: 1rem;
   padding-top: 1rem;
@@ -358,6 +392,80 @@ footer a {
   margin: 0.1rem;
 }
 
+/* Scope links with tooltips */
+.scope-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+}
+
+.scope-link .scope-code {
+  color: #1565c0;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.9rem;
+}
+
+.scope-link:hover .scope-code {
+  text-decoration: underline;
+}
+
+.scope-link .scope-tooltip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 4px;
+  background-color: #333;
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.scope-link:hover .scope-tooltip {
+  display: block;
+}
+
+/* Scope tag links (for tables) */
+.scope-tag-link {
+  text-decoration: none;
+}
+
+.scope-tag-link .scope-tag {
+  cursor: pointer;
+  transition: background-color 0.1s, transform 0.1s;
+}
+
+.scope-tag-link:hover .scope-tag {
+  background-color: #bbdefb;
+  transform: scale(1.05);
+}
+
+/* Comparison table scope links */
+.scope-name-link {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: #1565c0;
+}
+
+.scope-name-link:hover {
+  text-decoration: underline;
+}
+
+.scope-name-link .scope-description {
+  font-size: 0.75rem;
+  color: #666;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin-top: 2px;
+}
+
 /* User cards */
 .user-card {
   background: #fafafa;
@@ -400,6 +508,174 @@ footer a {
 }
 
 /* Responsive */
+/* Button group */
+.button-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-secondary {
+  background-color: #666;
+}
+
+.btn-secondary:hover {
+  background-color: #555;
+}
+
+/* Compare section */
+.compare-section {
+  border-left: 4px solid #4a90d9;
+}
+
+.compare-description {
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.app-list-header {
+  color: #444;
+  margin-bottom: 0.75rem;
+}
+
+.app-checkboxes {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+.app-checkbox {
+  display: flex;
+  align-items: flex-start;
+  padding: 0.5rem;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.app-checkbox:last-child {
+  border-bottom: none;
+}
+
+.app-checkbox:hover {
+  background-color: #f5f5f5;
+}
+
+.app-checkbox input {
+  margin-right: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.app-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-name {
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.app-id-small {
+  font-size: 0.75rem;
+  color: #888;
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
+.app-meta {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.app-id-header {
+  font-family: 'Monaco', 'Menlo', monospace;
+  color: #888;
+}
+
+.selection-count {
+  margin-top: 0.75rem;
+  color: #666;
+}
+
+.compare-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* Comparison table */
+.compare-table-container {
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 0.75rem;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.compare-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+  color: #444;
+  position: sticky;
+  top: 0;
+}
+
+.compare-table .scope-column {
+  text-align: left;
+  min-width: 200px;
+}
+
+.compare-table .app-column {
+  min-width: 120px;
+}
+
+.compare-table .app-column small {
+  font-weight: normal;
+  color: #666;
+}
+
+.compare-table .scope-name {
+  text-align: left;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.85rem;
+  color: #1565c0;
+}
+
+.compare-table .scope-check {
+  font-size: 1.1rem;
+}
+
+.compare-table .has-scope {
+  color: #2e7d32;
+  background-color: #e8f5e9;
+}
+
+.compare-table .no-scope {
+  color: #9e9e9e;
+  background-color: #fafafa;
+}
+
+.compare-table tr:hover td {
+  background-color: #fff8e1;
+}
+
+.compare-table tr:hover .has-scope {
+  background-color: #c8e6c9;
+}
+
+/* Responsive */
 @media (max-width: 600px) {
   .container {
     padding: 1rem;
@@ -426,5 +702,13 @@ footer a {
   .data-table th,
   .data-table td {
     padding: 0.5rem;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+
+  .compare-actions {
+    flex-direction: column;
   }
 }
