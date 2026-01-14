@@ -259,6 +259,29 @@ footer a {
   display: block;
 }
 
+.tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.tab-header h2 {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.btn-download {
+  background-color: #2e7d32;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.btn-download:hover {
+  background-color: #1b5e20;
+}
+
 /* Tables */
 .data-table {
   width: 100%;
